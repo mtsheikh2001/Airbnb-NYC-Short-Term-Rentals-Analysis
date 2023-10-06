@@ -1,0 +1,40 @@
+ import numpy as np
+ import pandas as pd
+ import datetime as dt
+
+prices = pd.read_csv("data/airbnb_price.csv")
+xls = pd.ExcelFile("data/airbnb_room_type.xlsx")
+room_types = xls.parse(0)
+reviews = pd.read_csv("data/airbnb_last_review.tsv", sep="\t")
+prices["price"] = prices["price"].str.replace(" dollars", "")
+prices["price"] = pd.to_numeric(prices["price"])
+free_listings = prices["price"] == 0
+prices = prices.loc[~free_listings]
+avg_price = round(prices["price"].mean(), 2)
+prices["price_per_month"] = prices["price"] * 365 / 12
+average_price_per_month = round(prices["price_per_month"].mean(), 2)
+difference = round((average_price_per_month - 3100),2)
+room_types["room_type"] = room_types["room_type"].str.lower()
+room_types["room_type"] = room_types["room_type"].astype("category")
+room_frequencies = room_types["room_type"].value_counts()
+reviews["last_review"] = pd.to_datetime(reviews["last_review"])
+first_reviewed = reviews["last_review"].dt.date.min()
+last_reviewed = reviews["last_review"].dt.date.max()
+rooms_and_prices = prices.merge(room_types, how="outer", on="listing_id")
+airbnb_merged = rooms_and_prices.merge(reviews, how="outer", on="listing_id")
+airbnb_merged.dropna(inplace=True)
+airbnb_merged["borough"] = airbnb_merged["nbhood_full"].str.partition(",")[0]
+boroughs = airbnb_merged.groupby("borough")["price"].agg(["sum", "mean", "median", "count"])
+boroughs = boroughs.round(2).sort_values("mean", ascending=False)
+label_names = ["Budget", "Average", "Expensive", "Extravagant"]
+ranges = [0, 69, 175, 350, np.inf]
+airbnb_merged["price_range"] = pd.cut(airbnb_merged["price"], bins=ranges, labels=label_names)
+prices_by_borough = airbnb_merged.groupby(["borough", "price_range"])["price_range"].count()
+airbnb_analysis = {'avg_price':avg_price,
+            'average_price_per_month': average_price_per_month,  
+            'difference':difference,          
+            'room_frequencies':room_frequencies, 
+            'first_reviewed': first_reviewed,
+            'last_reviewed': last_reviewed,
+            'prices_by_borough':prices_by_borough}
+print(airbnb_analysis)
