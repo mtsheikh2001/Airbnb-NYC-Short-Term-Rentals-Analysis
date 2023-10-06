@@ -1,0 +1,6 @@
+SELECT r.listing_id,price, borough, neighbourhood, price_per_month, latitude, longitude, host_name, last_review, minimum_nights, number_of_reviews, reviews_per_month, calculated_host_listings_count, availability_365, booked_days_365, description, room_type
+FROM prices p
+INNER JOIN reviews r
+ON p.listing_id = r.listing_id
+INNER JOIN room_types t
+ON t.listing_id = r.listing_id
